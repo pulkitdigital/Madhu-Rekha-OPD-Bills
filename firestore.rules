@@ -1,0 +1,12 @@
+// firestore.rules
+// Deploy these rules to Firebase Console → Firestore → Rules
+// For development (open access) — RESTRICT before production!
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /receipts/{docId} {
+      allow read, write: if true; // Change to auth-based rules for production
+    }
+  }
+}
