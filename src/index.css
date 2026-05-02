@@ -11,22 +11,28 @@ body {
 
 /* ── Print Styles ───────────────────────────────────── */
 @media print {
-  body * {
-    visibility: hidden !important;
-  }
 
-  #receipt-print-area,
-  #receipt-print-area * {
+  /* ── PaymentPDF page (standalone print page) ── */
+  body.pdf-print-page * {
     visibility: visible !important;
   }
 
-  #receipt-print-area {
+  /* ── Receipt single print (PaymentHistory page) ── */
+  body:not(.pdf-print-page) * {
+    visibility: hidden !important;
+  }
+
+  body:not(.pdf-print-page) #receipt-print-area,
+  body:not(.pdf-print-page) #receipt-print-area * {
+    visibility: visible !important;
+  }
+
+  body:not(.pdf-print-page) #receipt-print-area {
     position: fixed !important;
     top: 8mm !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: 190mm !important;
-    /* No min-height — receipt shrinks to its content */
     height: auto !important;
     padding: 5mm 7mm !important;
     border: 1px solid #999 !important;

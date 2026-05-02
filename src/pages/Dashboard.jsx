@@ -4,6 +4,19 @@ import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Link } from 'react-router-dom';
 
+// Sum a specific payment mode from paymentSplit or fallback paymentMode
+function getModeTotal(docs, mode) {
+  return docs.reduce((sum, d) => {
+    if (d.paymentSplit?.length > 0) {
+      return sum + d.paymentSplit
+        .filter((r) => r.mode === mode)
+        .reduce((s, r) => s + (r.amount || 0), 0);
+    }
+    // Legacy: single paymentMode
+    return sum + (d.paymentMode === mode ? (d.amount || 0) : 0);
+  }, 0);
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -13,17 +26,22 @@ export default function Dashboard() {
       try {
         const snap = await getDocs(query(collection(db, 'receipts'), orderBy('createdAt', 'desc')));
         const docs = snap.docs.map((d) => d.data());
+
         const total = docs.reduce((s, d) => s + (d.amount || 0), 0);
-        const cash = docs.filter((d) => d.paymentMode === 'Cash').reduce((s, d) => s + d.amount, 0);
-        const upi = docs.filter((d) => d.paymentMode === 'UPI').reduce((s, d) => s + d.amount, 0);
-        const bank = docs.filter((d) => d.paymentMode === 'Bank Transfer').reduce((s, d) => s + d.amount, 0);
+        const cash  = getModeTotal(docs, 'Cash');
+        const upi   = getModeTotal(docs, 'UPI');
+        const bank  = getModeTotal(docs, 'Bank Transfer');
 
-        // Today's bills
-        const todayStr = new Date().toISOString().slice(0, 10);
+        const todayStr   = new Date().toISOString().slice(0, 10);
         const todayBills = docs.filter((d) => d.date === todayStr);
-        const todayTotal = todayBills.reduce((s, d) => s + d.amount, 0);
+        const todayTotal = todayBills.reduce((s, d) => s + (d.amount || 0), 0);
 
-        setStats({ total, cash, upi, bank, count: docs.length, todayCount: todayBills.length, todayTotal });
+        setStats({
+          total, cash, upi, bank,
+          count: docs.length,
+          todayCount: todayBills.length,
+          todayTotal,
+        });
       } catch {
         setStats({ total: 0, cash: 0, upi: 0, bank: 0, count: 0, todayCount: 0, todayTotal: 0 });
       } finally {
@@ -43,16 +61,16 @@ export default function Dashboard() {
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <StatCard label="Total Bills" value={stats.count} sub="All time" />
-            <StatCard label="Total Collection" value={`₹${stats.total.toLocaleString('en-IN')}`} sub="All time" />
-            <StatCard label="Today's Bills" value={stats.todayCount} sub="Today" accent />
-            <StatCard label="Today's Collection" value={`₹${stats.todayTotal.toLocaleString('en-IN')}`} sub="Today" accent />
+            <StatCard label="Total Bills"       value={stats.count}                                        sub="All time" />
+            <StatCard label="Total Collection"  value={`₹${stats.total.toLocaleString('en-IN')}`}         sub="All time" />
+            <StatCard label="Today's Bills"     value={stats.todayCount}                                   sub="Today" accent />
+            <StatCard label="Today's Collection" value={`₹${stats.todayTotal.toLocaleString('en-IN')}`}   sub="Today" accent />
           </div>
 
           <h2 className="text-sm font-semibold text-slate-700 mb-3">Payment Mode Breakdown</h2>
           <div className="grid grid-cols-3 gap-4 mb-8">
-            <ModeCard mode="Cash" amount={stats.cash} icon="💵" />
-            <ModeCard mode="UPI" amount={stats.upi} icon="📱" />
+            <ModeCard mode="Cash"          amount={stats.cash} icon="💵" />
+            <ModeCard mode="UPI"           amount={stats.upi}  icon="📱" />
             <ModeCard mode="Bank Transfer" amount={stats.bank} icon="🏦" />
           </div>
 

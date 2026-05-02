@@ -11,6 +11,7 @@ export default function ReceiptPreview({ data }) {
     purpose = 'Consultancy Fees',
     operation = '',
     paymentMode = 'Cash',
+    paymentRows = [],
   } = data;
 
   const formatDate = (d) => {
@@ -18,6 +19,20 @@ export default function ReceiptPreview({ data }) {
     const [y, m, day] = d.split('-');
     return `${day}/${m}/${y.slice(2)}`;
   };
+
+  // Build payment mode display string
+  // If paymentRows has entries with amounts, show breakdown; else fallback to paymentMode
+  const filledRows = paymentRows.filter((r) => parseFloat(r.amount) > 0);
+  const isMultiMode = filledRows.length > 1;
+  const isSingleRow = filledRows.length === 1;
+
+  // Single mode: just show mode name
+  // Multi mode: show "Cash: ₹X, UPI: ₹Y" inline
+  const paymentModeDisplay = isMultiMode
+    ? filledRows.map((r) => `${r.mode}: ₹${Number(r.amount).toLocaleString('en-IN')}`).join('  |  ')
+    : isSingleRow
+    ? filledRows[0].mode
+    : paymentMode;
 
   return (
     <div
@@ -107,7 +122,7 @@ export default function ReceiptPreview({ data }) {
                 </span>
               </div>
               <div
-                className="text-center font-bold text-black uppercase  underline"
+                className="text-center font-bold text-black uppercase underline"
                 style={{ fontSize: '12px', letterSpacing: '0.04em' }}
               >
                 CONSULTANT EYE SURGEON
@@ -174,7 +189,56 @@ export default function ReceiptPreview({ data }) {
           <DottedRow label="a sum of Rupees" value={amountWords} />
           <DottedRow label="towards" value={purpose} />
           <DottedRow label="Operation / Procedure" value={operation} />
-          <DottedRow label="Mode of Payment" value={paymentMode} />
+
+          {/* ── Mode of Payment ── */}
+          {isMultiMode ? (
+            // Multi-mode: show each row on its own line
+            <div
+              className="flex items-baseline mb-1 leading-tight"
+              style={{ fontSize: '10px', letterSpacing: '0.02em' }}
+            >
+              <span
+                className="whitespace-nowrap text-black mr-1"
+                style={{ minWidth: '110px' }}
+              >
+                Mode of Payment :
+              </span>
+              <span className="flex-1 text-black" style={{ paddingBottom: '1px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {filledRows.map((r, i) => (
+                      <tr key={i}>
+                        <td
+                          style={{
+                            borderBottom: i < filledRows.length - 1 ? '1px dotted #aaa' : 'none',
+                            paddingBottom: '1px',
+                            paddingTop: i > 0 ? '1px' : '0',
+                            width: '50%',
+                          }}
+                        >
+                          {r.mode}
+                        </td>
+                        <td
+                          style={{
+                            borderBottom: i < filledRows.length - 1 ? '1px dotted #aaa' : 'none',
+                            paddingBottom: '1px',
+                            paddingTop: i > 0 ? '1px' : '0',
+                            textAlign: 'right',
+                            fontWeight: '600',
+                          }}
+                        >
+                          ₹ {Number(r.amount).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </span>
+            </div>
+          ) : (
+            // Single mode or fallback
+            <DottedRow label="Mode of Payment" value={paymentModeDisplay} />
+          )}
 
           {/* ══ BOTTOM: AMOUNT BOX + SIGNATURE ══ */}
           <div className="flex items-end justify-between mt-2 pt-1" style={{ marginTop: 'auto' }}>
@@ -195,12 +259,11 @@ export default function ReceiptPreview({ data }) {
               </div>
             </div>
 
-            {/* ══ SIGNATURE — image centered above "Signature" text ══ */}
+            {/* ══ SIGNATURE ══ */}
             <div
               className="flex flex-col items-center"
               style={{ fontSize: '9.5px', letterSpacing: '0.02em', width: '90px' }}
             >
-              {/* Sign image — centered via flex parent */}
               <img
                 src="/sign.png"
                 alt="Signature"
@@ -210,15 +273,11 @@ export default function ReceiptPreview({ data }) {
                   e.target.nextSibling.style.display = 'block';
                 }}
               />
-              {/* Fallback blank space if image fails */}
               <div className="hidden" style={{ height: '30px' }} />
-
-              {/* Divider line */}
               <div
                 className="border-t border-gray-700 mt-0.5 mb-0.5"
                 style={{ width: '90px' }}
               />
-              {/* Label */}
               <div className="italic text-center" style={{ letterSpacing: '0.02em' }}>
                 Signature
               </div>
